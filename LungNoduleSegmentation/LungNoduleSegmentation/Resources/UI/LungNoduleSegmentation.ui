@@ -7,65 +7,91 @@
     <x>0</x>
     <y>0</y>
     <width>744</width>
-    <height>1313</height>
+    <height>1243</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="horLayout">
+     <item>
+      <spacer name="horizontalSpacer_5">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QRadioButton" name="singleCaseRadioButton">
+       <property name="text">
+        <string>Single Case</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QRadioButton" name="batchCaseRadioButton">
+       <property name="text">
+        <string>Batch Processing</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
    <item>
     <widget class="ctkCollapsibleButton" name="CollapsibleButton">
      <property name="enabled">
       <bool>true</bool>
      </property>
+     <property name="maximumSize">
+      <size>
+       <width>800</width>
+       <height>16777215</height>
+      </size>
+     </property>
      <property name="text">
-      <string>Nodule ROI</string>
+      <string>Create Segmentation</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
        <layout class="QFormLayout" name="formLayout"/>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="horLayout">
-        <item>
-         <spacer name="horizontalSpacer_5">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item>
-         <widget class="QRadioButton" name="singleCaseRadioButton">
-          <property name="text">
-           <string>Single Case</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QRadioButton" name="batchCaseRadioButton">
-          <property name="text">
-           <string>Batch Processing</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
        <widget class="QWidget" name="singleCase" native="true">
         <layout class="QGridLayout" name="singleCaseGroupBox">
-         <item row="2" column="6">
-          <widget class="QPushButton" name="noduleCentroidButton">
+         <item row="1" column="3" colspan="3">
+          <widget class="QSlider" name="roiSizeSlider">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QLabel" name="label">
            <property name="text">
-            <string>Cursor Placement</string>
+            <string>Volume:</string>
            </property>
           </widget>
          </item>
          <item row="3" column="5">
           <layout class="QHBoxLayout" name="acsLayout">
+           <item>
+            <spacer name="horizontalSpacer">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
            <item>
             <widget class="QLineEdit" name="sLineEdit">
              <property name="maximumSize">
@@ -107,27 +133,7 @@
            </item>
           </layout>
          </item>
-         <item row="3" column="2">
-          <spacer name="horizontalSpacer">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item row="7" column="5" colspan="2">
-          <widget class="QLineEdit" name="fileName">
-           <property name="text">
-            <string>Output ROI</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="6">
+         <item row="1" column="7">
           <widget class="QLineEdit" name="roiSizeLabel">
            <property name="maximumSize">
             <size>
@@ -137,34 +143,15 @@
            </property>
           </widget>
          </item>
-         <item row="3" column="6">
-          <widget class="QPushButton" name="centroidManualButton">
+         <item row="2" column="7">
+          <widget class="QPushButton" name="noduleCentroidButton">
            <property name="text">
-            <string>Enter Centroid Manually</string>
+            <string>Cursor Placement</string>
            </property>
           </widget>
          </item>
-         <item row="0" column="3" colspan="4">
-          <widget class="qMRMLNodeComboBox" name="volumeComboBox">
-           <property name="enabled">
-            <bool>true</bool>
-           </property>
-           <property name="nodeTypes">
-            <stringlist>
-             <string>vtkMRMLScalarVolumeNode</string>
-            </stringlist>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="2">
-          <widget class="QLabel" name="roiSizeLabelStatic">
-           <property name="text">
-            <string>ROI Size:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="5" column="4" colspan="3">
-          <widget class="ctkCollapsibleButton" name="CollapsibleButton_5">
+         <item row="5" column="4" colspan="4">
+          <widget class="ctkCollapsibleButton" name="moreOptionsCollapsible">
            <property name="text">
             <string>More Options</string>
            </property>
@@ -180,13 +167,6 @@
              <widget class="QCheckBox" name="roiCheckBox">
               <property name="text">
                <string>Non-Isotropic ROI Size</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="visualizeCheckbox">
-              <property name="text">
-               <string>VIsualize ROI</string>
               </property>
              </widget>
             </item>
@@ -281,38 +261,63 @@
                 </property>
                </spacer>
               </item>
+              <item row="0" column="0">
+               <widget class="QCheckBox" name="visualizeCheckbox">
+                <property name="text">
+                 <string>VIsualize ROI</string>
+                </property>
+               </widget>
+              </item>
              </layout>
+            </item>
+            <item>
+             <widget class="QPushButton" name="singleROIButton">
+              <property name="text">
+               <string>Create Single ROI</string>
+              </property>
+             </widget>
             </item>
            </layout>
           </widget>
          </item>
-         <item row="0" column="2">
-          <widget class="QLabel" name="label">
-           <property name="text">
-            <string>Volume:</string>
+         <item row="0" column="3" colspan="5">
+          <widget class="qMRMLNodeComboBox" name="volumeComboBox">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="nodeTypes">
+            <stringlist>
+             <string>vtkMRMLScalarVolumeNode</string>
+            </stringlist>
            </property>
           </widget>
          </item>
-         <item row="1" column="3" colspan="3">
-          <widget class="QSlider" name="roiSizeSlider">
+         <item row="1" column="2">
+          <widget class="QLabel" name="roiSizeLabelStatic">
+           <property name="text">
+            <string>ROI Size:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="7">
+          <widget class="QPushButton" name="centroidManualButton">
+           <property name="text">
+            <string>Enter Centroid Manually</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="3">
+          <spacer name="horizontalSpacer_4">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
-          </widget>
-         </item>
-         <item row="10" column="4" colspan="3">
-          <widget class="QPushButton" name="applyButton">
-           <property name="text">
-            <string>Create Single ROI</string>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
            </property>
-          </widget>
-         </item>
-         <item row="7" column="4">
-          <widget class="QLabel" name="label_2">
-           <property name="text">
-            <string>Output Volume Name</string>
-           </property>
-          </widget>
+          </spacer>
          </item>
         </layout>
        </widget>
@@ -320,6 +325,9 @@
       <item>
        <widget class="QWidget" name="batchCase" native="true">
         <layout class="QGridLayout" name="batchCaseGroupBox">
+         <item row="1" column="4">
+          <widget class="QLineEdit" name="batchVolumeLineEdit"/>
+         </item>
          <item row="4" column="4" colspan="2">
           <widget class="QPushButton" name="batchCaseApplyButton">
            <property name="text">
@@ -327,23 +335,10 @@
            </property>
           </widget>
          </item>
-         <item row="3" column="4">
-          <widget class="QLineEdit" name="batchOutputLineEdit"/>
-         </item>
          <item row="3" column="3">
           <widget class="QLabel" name="label_5">
            <property name="text">
             <string>Output Path</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="4">
-          <widget class="QLineEdit" name="batchCentroidLineEdit"/>
-         </item>
-         <item row="1" column="3">
-          <widget class="QLabel" name="label_3">
-           <property name="text">
-            <string>Path to Volumes</string>
            </property>
           </widget>
          </item>
@@ -353,6 +348,19 @@
             <string>Path to Centroids &amp; Sizes</string>
            </property>
           </widget>
+         </item>
+         <item row="3" column="4">
+          <widget class="QLineEdit" name="batchOutputLineEdit"/>
+         </item>
+         <item row="1" column="3">
+          <widget class="QLabel" name="label_3">
+           <property name="text">
+            <string>Path to Volumes</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="4">
+          <widget class="QLineEdit" name="batchCentroidLineEdit"/>
          </item>
          <item row="1" column="2">
           <spacer name="horizontalSpacer_2">
@@ -367,57 +375,53 @@
            </property>
           </spacer>
          </item>
-         <item row="1" column="4">
-          <widget class="QLineEdit" name="batchVolumeLineEdit"/>
-         </item>
         </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="segmentationButton">
+        <property name="text">
+         <string>Create ROI and Segment</string>
+        </property>
        </widget>
       </item>
      </layout>
     </widget>
    </item>
    <item>
+    <layout class="QGridLayout" name="gridLayout"/>
+   </item>
+   <item>
     <widget class="ctkCollapsibleButton" name="CollapsibleButton_2">
      <property name="text">
-      <string>Nodule Segmentation</string>
+      <string>Editing and Export</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_3">
       <item>
-       <layout class="QGridLayout" name="gridLayout">
-        <item row="1" column="3">
-         <widget class="QPushButton" name="segmentationButton">
-          <property name="text">
-           <string>Segment</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="3">
-         <widget class="qMRMLNodeComboBox" name="segmentationComboBox"/>
-        </item>
-        <item row="0" column="2">
-         <widget class="QLabel" name="label_6">
-          <property name="text">
-           <string>Volume to segment:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="1">
-         <spacer name="horizontalSpacer_4">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-       </layout>
+       <widget class="QLabel" name="label_2">
+        <property name="text">
+         <string>Segmentation Editing</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
       </item>
       <item>
-       <widget class="qMRMLSegmentationFileExportWidget" name="segmentExport"/>
+       <widget class="qMRMLSegmentEditorWidget" name="segmentEditorWidget"/>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_6">
+        <property name="text">
+         <string>Segmentation Export</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="qMRMLSegmentationFileExportWidget" name="segmentFileExportWidget"/>
       </item>
       <item>
        <spacer name="verticalSpacer_2">
@@ -470,6 +474,11 @@
    <extends>QWidget</extends>
    <header>qMRMLWidget.h</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>qMRMLSegmentEditorWidget</class>
+   <extends>qMRMLWidget</extends>
+   <header>qMRMLSegmentEditorWidget.h</header>
   </customwidget>
   <customwidget>
    <class>qMRMLSegmentationFileExportWidget</class>

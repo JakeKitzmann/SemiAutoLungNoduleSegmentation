@@ -82,9 +82,9 @@ class LungNoduleSegmentationWidget(ScriptedLoadableModuleWidget, VTKObservationM
         # Buttons
         # self.ui.applyButton.connect('clicked(bool)', self.onApplyButton)
         self.ui.noduleCentroidButton.connect('clicked(bool)', self.onNoduleCentroidButton)
-        self.ui.applyButton.connect('clicked(bool)', self.onApplyButton)
         self.ui.batchCaseApplyButton.connect('clicked(bool)', self.onBatchCaseApplyButton)
         self.ui.segmentationButton.connect('clicked(bool)', self.onSegmentationButton)
+        self.ui.singleROIButton.connect('clicked(bool)', self.apply)
 
         # Sliders
         self.ui.roiSizeSlider.minimum = 4
@@ -125,10 +125,6 @@ class LungNoduleSegmentationWidget(ScriptedLoadableModuleWidget, VTKObservationM
         self.ui.volumeComboBox.connect('currentNodeChanged(vtkMRMLNode*)', self.onVolumeSelected)
         self.ui.volumeComboBox.renameEnabled = True
 
-        self.ui.segmentationComboBox.setMRMLScene(slicer.mrmlScene)
-        self.ui.segmentationComboBox.connect('currentNodeChanged(vtkMRMLNode*)', self.onVolumeSelected)
-        self.ui.segmentationComboBox.renameEnabled = True
-
         # CheckBoxes
         self.ui.roiCheckBox.connect('clicked(bool)', self.onRoiCheckBox)
         self.onRoiCheckBox()
@@ -147,8 +143,8 @@ class LungNoduleSegmentationWidget(ScriptedLoadableModuleWidget, VTKObservationM
         self.initializeParameterNode()
 
         # set up export widget
-        self.ui.segmentExport.setMRMLScene(slicer.mrmlScene)
-        segmentationNode = slicer.mrmlScene.GetFirstNodeByClass("vtkMRMLSegmentationNode")
+        self.ui.segmentEditorWidget.setMRMLScene(slicer.mrmlScene)
+        self.ui.segmentFileExportWidget.setMRMLScene(slicer.mrmlScene)
 
         self.onVolumeSelected()
 
@@ -156,6 +152,8 @@ class LungNoduleSegmentationWidget(ScriptedLoadableModuleWidget, VTKObservationM
         # volume, centroid variables
         self.volume = self.ui.volumeComboBox.currentNode()
         self.centroid = None
+
+        self.ui.moreOptionsCollapsible.collapsed = True
 
 
     def cleanup(self):
@@ -317,7 +315,11 @@ class LungNoduleSegmentationWidget(ScriptedLoadableModuleWidget, VTKObservationM
     def onSegmentationButton(self):
 
         # np array of the roi
-        volumeArray = slicer.util.arrayFromVolume(self.ui.segmentationComboBox.currentNode())
+        volumeArray = slicer.util.arrayFromVolume(self.apply())
+
+        if volumeArray is None:
+            logging.error('No ROI created')
+            return
 
         # normalize the roi for better network performance
         volumeArray = (volumeArray - volumeArray.min()) / (volumeArray.max() - volumeArray.min())
@@ -398,14 +400,17 @@ class LungNoduleSegmentationWidget(ScriptedLoadableModuleWidget, VTKObservationM
         # Optional: Remove the temporary labelmap node if no longer needed
         slicer.mrmlScene.RemoveNode(labelmap_node)
 
-        self.ui.segmentExport.setSegmentationNode(segmentation_node)
-
+        self.allow_editing(segmentation_node=segmentation_node)
 
         print("Segmentation created!")
 
+    def allow_editing(self, segmentation_node):
+        self.ui.segmentFileExportWidget.setSegmentationNode(segmentation_node)
+        self.ui.segmentEditorWidget.setSegmentationNode(segmentation_node)
+        self.ui.segmentEditorWidget.setMasterVolumeNode(self.ui.volumeComboBox.currentNode())
 
     # preliminary math to be plugged into create_roi
-    def onApplyButton(self):
+    def apply(self):
 
         # get centroid
         node = slicer.mrmlScene.GetFirstNodeByName('nodule_centroid')
@@ -451,7 +456,7 @@ class LungNoduleSegmentationWidget(ScriptedLoadableModuleWidget, VTKObservationM
             #print(f'Isotropic size: {size}')
 
         # create roi
-        self.create_roi(self.volume, difference_slices_int, size)
+        return self.create_roi(self.volume, difference_slices_int, size)
 
     # create the roi from the centroid and size
     def create_roi(self, volume, centroid, size):
@@ -465,7 +470,7 @@ class LungNoduleSegmentationWidget(ScriptedLoadableModuleWidget, VTKObservationM
         roi_img_np = imageROI.create_roi_image(sitk_img, size, centroid)
 
         roi_img_volume = slicer.util.addVolumeFromArray(roi_img_np)
-        roi_img_volume.SetName(self.ui.fileName.text)
+        roi_img_volume.SetName(self.volume.GetName() + '_roi')
         roi_img_volume.SetSpacing(volume.GetSpacing())
         roi_img_volume.SetOrigin(volume.GetOrigin())
 
@@ -482,12 +487,16 @@ class LungNoduleSegmentationWidget(ScriptedLoadableModuleWidget, VTKObservationM
         if self.visualizeROI:
             slicer.util.setSliceViewerLayers(background=roi_img_volume, fit=True)
 
-        self.ui.segmentationComboBox.setCurrentNode(roi_img_volume)
+        
+        if not self.ui.visualizeCheckbox.isChecked():
+            slicer.mrmlScene.RemoveNode(roi_img_volume)
+
+
+        return roi_img_volume
 
     def onVolumeSelected(self):
         self.currentVolume = self.ui.volumeComboBox.currentNode()
         self.volume = self.currentVolume
-        self.ui.fileName.text = self.currentVolume.GetName() + '_roi'
 
     # BATCH CASES
 
