@@ -51,6 +51,21 @@ class LungNoduleSegmentationWidget(ScriptedLoadableModuleWidget, VTKObservationM
         self.currentVolume = None
         self.inSlices = False
         self.visualizeROI = False
+        self.parameterSetNode = None
+
+    def selectParameterNode(self):
+        segmentEditorSingletonTag = "segmentEditorWidget"
+        segmentEditorNode = slicer.mrmlScene.GetSingletonNode(segmentEditorSingletonTag, "vtkMRMLSegmentEditorNode")
+        if segmentEditorNode is None:
+            segmentEditorNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLSegmentEditorNode")
+            segmentEditorNode.UnRegister(None)
+            segmentEditorNode.SetSingletonTag(segmentEditorSingletonTag)
+            segmentEditorNode = slicer.mrmlScene.AddNode(segmentEditorNode)
+        if self.parameterSetNode == segmentEditorNode:
+            return
+        self.parameterSetNode = segmentEditorNode
+        self.ui.segmentEditorWidget.setMRMLSegmentEditorNode(self.parameterSetNode)
+        
 
 
     def setup(self):
@@ -143,6 +158,7 @@ class LungNoduleSegmentationWidget(ScriptedLoadableModuleWidget, VTKObservationM
         self.initializeParameterNode()
 
         # set up export widget
+        self.selectParameterNode()
         self.ui.segmentEditorWidget.setMRMLScene(slicer.mrmlScene)
         self.ui.segmentFileExportWidget.setMRMLScene(slicer.mrmlScene)
 
@@ -395,6 +411,7 @@ class LungNoduleSegmentationWidget(ScriptedLoadableModuleWidget, VTKObservationM
         # Set the color of the segment to purple
         segment_id = segmentation_node.GetSegmentation().GetNthSegmentID(0)  # Assuming the first segment
         segmentation_node.GetSegmentation().GetSegment(segment_id).SetColor((178./255. , 102./205., 1))
+        segmentation_node.SetName(self.ui.volumeComboBox.currentNode().GetName() + '_segmentation')
 
 
         # Optional: Remove the temporary labelmap node if no longer needed
