@@ -27,9 +27,9 @@ class LungNoduleSegmentation(ScriptedLoadableModule):
 
     def __init__(self, parent):
         ScriptedLoadableModule.__init__(self, parent)
-        self.parent.title = "Lung Nodule Segmentation"  
-        self.parent.categories = ["Deep Learning Lung Nodule Segmentation"] 
-        self.parent.dependencies = [] 
+        self.parent.title = "Deep Learning Lung Nodule Segmentation"  
+        self.parent.categories = ["APPIL Tools"]
+        self.parent.dependencies = []
         self.parent.contributors = ["Jake Kitzmann (Advanced Pulmonary Physiomic Imaging Laboratory -- University of Iowa Roy J. and Lucille H. Carver College of Medicine)"]
 
         self.parent.helpText = ""
@@ -226,9 +226,21 @@ class LungNoduleSegmentationWidget(ScriptedLoadableModuleWidget, VTKObservationM
         self.ui.batchCase.setVisible(False)
         self.ui.singleCase.setVisible(True)
 
+        self.ui.CollapsibleButton_2.setVisible(True)
+        self.ui.label_2.setVisible(True)
+        self.ui.segmentEditorWidget.setVisible(True)
+        self.ui.label_6.setVisible(True)
+        self.ui.segmentFileExportWidget.setVisible(True)
+
     def onBatchCaseRadioButton(self):
         self.ui.singleCase.setVisible(False)
         self.ui.batchCase.setVisible(True)
+
+        self.ui.CollapsibleButton_2.setVisible(False)
+        self.ui.label_2.setVisible(False)
+        self.ui.segmentEditorWidget.setVisible(False)
+        self.ui.label_6.setVisible(False)
+        self.ui.segmentFileExportWidget.setVisible(False)
 
     def aSliderNonIsoChanged(self):
         self.ui.aLineEditNonIso.text = self.ui.aSliderNonIso.value * 2
@@ -305,27 +317,102 @@ class LungNoduleSegmentationWidget(ScriptedLoadableModuleWidget, VTKObservationM
 
     # convert the xyz centroid to slices
     def getCentroidFromXYZ(self, centroid, volume):
+        difference_slices_int = []
 
         # Get the origin and spacing of the volume
         origin = volume.GetOrigin()
-        #print(f'origin: {origin}')
         spacing = volume.GetSpacing()
-        #print(f'spacing: {spacing}')
-
-        difference_vector = np.subtract(centroid, origin)
-        #print(f'difference xyz: {difference_vector}')
-
-        difference_slices = np.divide(difference_vector, spacing)
-        difference_slices_int = []
+        difference_vector = np.subtract(centroid, origin) # location of centroid in xyz
+        difference_slices = np.divide(difference_vector, spacing) # location of centroid in sca
 
         # convert to int and take absolute value because slices cannot be negative
         for i in range(3):
-            slice = int(difference_slices[i])
-            if slice < 0:
-                slice = -1 * slice
+            slice = abs(int(difference_slices[i]))
             difference_slices_int.append(slice)
         
         return difference_slices_int
+    
+    # create DLS class and segment nodule
+    def segment(self, volume_np):
+        model = DeepLearningSegmentation()
+        return model.run(torch.tensor(volume_np).to(torch.float32).unsqueeze(0).unsqueeze(0)) # two extra dimensions for batch and channel
+
+    # project ROI segmentation back to the full volume
+    def project(self, segmentation, centroid, volume):
+
+        # remove uneeded channels
+        segmentation = segmentation[0, 0, :, :, :]
+
+        # threshold to binary
+        segmentation[segmentation > .5] = 1
+        segmentation[segmentation <= .5] = 0
+
+        roi_size_expansion = [20,20,20]
+
+        # create segmentation mapped to full volume
+        full_segmentation = np.zeros(slicer.util.arrayFromVolume(volume).shape)
+
+        print(segmentation.shape)
+        print(full_segmentation.shape)
+
+        if self.inSlices: # if centroid is already in slices (from manual entering)
+            # conversion factor to map the roi to the full volume
+            centroid_slices = [int(self.ui.sLineEdit.text),int(self.ui.cLineEdit.text),int(self.ui.aLineEdit.text)]
+            conversion = [centroid_slices[0] - roi_size_expansion[0], centroid_slices[1] - roi_size_expansion[1], centroid_slices[2] - roi_size_expansion[2]] 
+        else: # if centroid is in xyz coordinates
+            node = slicer.mrmlScene.GetFirstNodeByName('nodule_centroid')
+            centroid = [0, 0, 0]
+            node.GetNthFiducialPosition(0, centroid)
+            centroid_slices = self.getCentroidFromXYZ(centroid, volume)
+            # conversion factor to map the roi to the full volume
+            conversion = [centroid_slices[0] - roi_size_expansion[0], centroid_slices[1] - roi_size_expansion[1], centroid_slices[2] - roi_size_expansion[2]] 
+
+        # assign the segmentation to the full volume
+        for i in range(segmentation.shape[0]):
+            for j in range(segmentation.shape[1]):
+                for k in range(segmentation.shape[2]):
+                    # switch a and s axes on seg because numpy is fucking stupid and thinks it's special
+                    full_segmentation[i + conversion[2], j + conversion[1], k + conversion[0]] = segmentation[i,j,k] 
+
+        return full_segmentation
+    
+    def create_segmentation_volume(self, volume, segmentation):
+        # Convert the numpy array to a vtkMRMLLabelMapVolumeNode
+        labelmap_node = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLLabelMapVolumeNode")
+        slicer.util.updateVolumeFromArray(labelmap_node, segmentation)
+        
+        # find spacing and origin of image so we put the seg in the right spot
+        spacing = volume.GetSpacing()
+        origin = volume.GetOrigin()
+        
+        # make a matrix to assign
+        direction_matrix = vtk.vtkMatrix4x4()
+
+        # give the matrix the vals it needs
+        volume.GetIJKToRASDirectionMatrix(direction_matrix)
+
+        # apply metadata to segmentation
+        labelmap_node.SetSpacing(spacing)
+        labelmap_node.SetOrigin(origin)
+        labelmap_node.SetIJKToRASDirectionMatrix(direction_matrix)
+
+        # Convert the labelmap to a segmentation node
+        segmentation_node = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentationNode")
+        slicer.modules.segmentations.logic().ImportLabelmapToSegmentationNode(labelmap_node, segmentation_node)
+
+        # Set segmentation geometry to match the known volume
+        segmentation_node.SetReferenceImageGeometryParameterFromVolumeNode(volume)
+   
+        # Set the color of the segment to purple
+        segment_id = segmentation_node.GetSegmentation().GetNthSegmentID(0)  # Assuming the first segment
+        segmentation_node.GetSegmentation().GetSegment(segment_id).SetColor((178./255. , 102./205., 1))
+        segmentation_node.SetName(self.ui.volumeComboBox.currentNode().GetName() + '_segmentation')
+        
+        # Remove the  labelmap node 
+        slicer.mrmlScene.RemoveNode(labelmap_node)
+
+        self.allow_editing(segmentation_node=segmentation_node)
+
 
     # create a segmentation of nodule on roi generated 
     def onSegmentationButton(self):
@@ -339,85 +426,13 @@ class LungNoduleSegmentationWidget(ScriptedLoadableModuleWidget, VTKObservationM
 
         # normalize the roi for better network performance
         volumeArray = (volumeArray - volumeArray.min()) / (volumeArray.max() - volumeArray.min())
-                       
-        # create model and prediction
-        tensor_roi = torch.tensor(volumeArray) 
-        model = DeepLearningSegmentation()
-        segmentation = model.run(tensor_roi.to(torch.float32).unsqueeze(0).unsqueeze(0)) # two extra dimensions for batch and channel
-
-        # project back to original volume
-        full_volume = self.volume
-        node = slicer.mrmlScene.GetFirstNodeByName('nodule_centroid')
-
-        centroid = [0, 0, 0]
-        node.GetNthFiducialPosition(0, centroid)
-        #print(f'centroid: {centroid}')
-
-        difference_slices_int = self.getCentroidFromXYZ(centroid, full_volume)
-
-        # remove uneeded dimensions
-        segmentation = segmentation[0, 0, :, :, :]
-        segmentation[segmentation > .5] = 1 # binary segmentation
-
-        roi_size = [int(self.ui.roiSizeSlider.value), int(self.ui.roiSizeSlider.value), int(self.ui.roiSizeSlider.value)]
-
-        # conversion factor to map the roi to the full volume
-        conversion = [difference_slices_int[0] - roi_size[0], difference_slices_int[1] - roi_size[1], difference_slices_int[2] - roi_size[2]] 
-
-        # create segmentation mapped to full volume
-        full_segmentation = np.zeros(slicer.util.arrayFromVolume(full_volume).shape)
-        full_segmentation = np.swapaxes(full_segmentation, 0, 2)
-
-        # print(f'segmentation shape: {segmentation.shape}')
-        # print(f'volume shape: {full_segmentation.shape}')
-        # print(f'difference slices: {difference_slices_int}')
-
-        # assign the segmentation to the full volume
-        for i in range(segmentation.shape[0]):
-            for j in range(segmentation.shape[1]):
-                for k in range(segmentation.shape[2]):
-                    # switch a and s axes on seg because numpy is fucking stupid
-                    full_segmentation[i + conversion[0], j + conversion[1], k + conversion[2]] = segmentation[k, j, i] 
-
-        # permuting the axes twice doesnt make any sense but it works, fuck it
-        full_segmentation = np.swapaxes(full_segmentation, 0, 2)
-            
-        # Convert the numpy array to a vtkMRMLLabelMapVolumeNode
-        labelmap_node = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLLabelMapVolumeNode")
-        slicer.util.updateVolumeFromArray(labelmap_node, full_segmentation)
+        segment = self.segment(volumeArray)
         
-        # find spacing and origin of image so we put the seg in the right spot
-        spacing = full_volume.GetSpacing()
-        origin = full_volume.GetOrigin()
-        
-        # make a matrix to assign
-        direction_matrix = vtk.vtkMatrix4x4()
+        # project the segmentation back to the full volume
+        full_segmentation = self.project(segment, self.centroid, self.volume)
 
-        # give the matrix the vals it needs
-        full_volume.GetIJKToRASDirectionMatrix(direction_matrix)
-
-        # apply metadata to segmentation
-        labelmap_node.SetSpacing(spacing)
-        labelmap_node.SetOrigin(origin)
-        labelmap_node.SetIJKToRASDirectionMatrix(direction_matrix)
-
-        # Convert the labelmap to a segmentation node
-        segmentation_node = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentationNode")
-        slicer.modules.segmentations.logic().ImportLabelmapToSegmentationNode(labelmap_node, segmentation_node)
-
-        # Set segmentation geometry to match the known volume
-        segmentation_node.SetReferenceImageGeometryParameterFromVolumeNode(full_volume)
-   
-        # Set the color of the segment to purple
-        segment_id = segmentation_node.GetSegmentation().GetNthSegmentID(0)  # Assuming the first segment
-        segmentation_node.GetSegmentation().GetSegment(segment_id).SetColor((178./255. , 102./205., 1))
-        segmentation_node.SetName(self.ui.volumeComboBox.currentNode().GetName() + '_segmentation')
-
-
-        # Optional: Remove the temporary labelmap node if no longer needed
-        slicer.mrmlScene.RemoveNode(labelmap_node)
-
-        self.allow_editing(segmentation_node=segmentation_node)
+        # create the segmentation volume
+        self.create_segmentation_volume(self.volume, full_segmentation)
 
         print("Segmentation created!")
 
@@ -458,6 +473,7 @@ class LungNoduleSegmentationWidget(ScriptedLoadableModuleWidget, VTKObservationM
         # otherwise the math is a lot easier
         else:
             difference_slices_int = [int(self.ui.sLineEdit.text), int(self.ui.cLineEdit.text), int(self.ui.aLineEdit.text)]
+            self.centroid = difference_slices_int
         
        # size list init
         size = [0,0,0]
@@ -530,20 +546,14 @@ class LungNoduleSegmentationWidget(ScriptedLoadableModuleWidget, VTKObservationM
             reader_obj = csv.reader(file_obj)
             rows = []
             for row in reader_obj:
-                print(row)
                 rows.append(row)
 
         # create pairs of volumes and centroids for each case
         for volumePath in volumePaths:
-            print('-----------------' + volumePath)
             pid = volumePath.split('/')[-1].split('_')[0]
-
             for row in rows:
                 if pid == row[0]:
-                    print('match')
                     cases.append(self.case(volumeListPath + volumePath, row[0], row[1], row[2], row[3], row[4]))
-
-
 
         for case in cases:
             volume = slicer.util.loadVolume(case.volumePath)
@@ -552,13 +562,28 @@ class LungNoduleSegmentationWidget(ScriptedLoadableModuleWidget, VTKObservationM
 
             roi = self.create_roi(volume, centroid, size)
 
-            success = slicer.util.saveNode(roi, outputDir + '/' + case.PID + '_roi.nrrd')
-            if success:
-                print(f'Volume {case.PID} saved to {outputDir}')
-            else:
-                print(f'Failed to save volume {case.PID} to {outputDir}')
-               
-    
+            if self.ui.batchROIVolumeCheckBox.isChecked():
+                success = slicer.util.saveNode(roi, outputDir + '/' + case.PID + '_roi.nrrd')
+                if success:
+                    print(f'Volume {case.PID} saved to {outputDir}')
+                else:
+                    print(f'Failed to save volume {case.PID} to {outputDir}')
+
+
+            # normalize the roi for better network performance
+            roi = (roi - roi.min()) / (roi.max() - roi.min())
+            segment = self.segment(roi)
+
+            # project the segmentation back to the full volume
+            full_segmentation = self.project(segment, self.centroid, self.volume)
+
+            # create the segmentation volume
+            self.create_segmentation_volume(self.volume, full_segmentation)
+
+            success = slicer.util.saveNode(full_segmentation)
+            print("Segmentation created!")
+
+                
 
     # class to store case information in batch processing
     class case:
@@ -699,15 +724,12 @@ class ImageROI:
 class DeepLearningSegmentation:
     def __init__(self):
         pass
-        # print("DeepLearningSegmentation object created")
 
     def run(self, inputVolume):
 
-        # print(f'input shape: {inputVolume.shape}')
-        # print(f'input mean: {inputVolume.mean()}')
 
-        model = UNet3D()
-        model.load_state_dict(torch.load('/Users/jacob_kitz/Desktop/LungNoduleSegmentation/LungNoduleSegmentation/LungNoduleSegmentation/NetworkStructure/nov11_24.pth', map_location=torch.device('cpu')))
+        model = UNet()
+        model.load_state_dict(torch.load('/Users/jacob_kitz/Desktop/SemiAutoLungNoduleSegmentation/LungNoduleSegmentation/LungNoduleSegmentation/model_weights.pth', map_location=torch.device('cpu')))
         # print(model.eval())
         
         output = model(inputVolume).detach().numpy()
@@ -715,43 +737,45 @@ class DeepLearningSegmentation:
         return output
 
 
-class DoubleConv3D(nn.Module):
+class DoubleConv(nn.Module):
     def __init__(self, in_channels, out_channels):
-        super(DoubleConv3D, self).__init__()
-        self.conv1 = nn.Conv3d(in_channels, out_channels, kernel_size=3, padding=1)
-        self.relu1 = nn.ReLU()
-        self.conv2 = nn.Conv3d(out_channels, out_channels, kernel_size=3, padding=1)
-        self.relu2 = nn.ReLU()
+        super(DoubleConv, self).__init__()
+        self.conv = nn.Sequential(
+            nn.Conv3d(in_channels, out_channels, 3, 1, 1, bias=False),
+            nn.BatchNorm3d(out_channels),
+            nn.ReLU(inplace=True),
+            nn.Conv3d(out_channels, out_channels, 3, 1, 1, bias=False),
+            nn.BatchNorm3d(out_channels),
+            nn.ReLU(inplace=True)
+        )
 
     def forward(self, x):
-        x = self.relu1(self.conv1(x))
-        x = self.relu2(self.conv2(x))
-        return x
+        return self.conv(x)
 
-class UNet3D(nn.Module):
+class UNet(nn.Module):
     def __init__(self, 
-                in_channels=1,   
-                out_channels=1,  # 1 for binary segmentation
-                features=[64, 128, 256, 512]):  # Number of feature maps for each layer
-        super(UNet3D, self).__init__()
+                 in_channels=1,   
+                 out_channels=1,  # 1 for binary segmentation
+                 features=[64, 128, 256, 512]):  # Number of feature maps for each layer
+        super(UNet, self).__init__()
         
         self.downs = nn.ModuleList()  # Down convolutions
         self.ups = nn.ModuleList()    # Up convolutions
         self.pool = nn.MaxPool3d(kernel_size=2, stride=2)  # Max pooling for 3D
 
-        # Downward path (encoding)
+        # down convolutions
         for feature in features:
-            self.downs.append(DoubleConv3D(in_channels, feature))
+            self.downs.append(DoubleConv(in_channels, feature))
             in_channels = feature  # Update in_channels for next layer
+            
+        # bottleneck layer
+        self.bottleneck = DoubleConv(features[-1], features[-1] * 2)
 
-        # Bottleneck layer (middle layer)
-        self.bottleneck = DoubleConv3D(features[-1], features[-1] * 2)  # Bottleneck layer
-
-        # Upward path (decoding)
+        # up convolutions
         for feature in reversed(features):
             self.ups.append(nn.ConvTranspose3d(feature * 2, feature, kernel_size=2, stride=2))  # Transpose convolution
-            self.ups.append(DoubleConv3D(feature * 2, feature))  # Double convolution
-
+            self.ups.append(DoubleConv(feature * 2, feature))
+            
         # Final output layer (segmentation output)
         self.final_conv = nn.Conv3d(features[0], out_channels, kernel_size=1)  # Output layer for segmentation
 
@@ -777,19 +801,13 @@ class UNet3D(nn.Module):
 
             # Resize if needed (if the sizes mismatch)
             if x.shape != skip_connection.shape:
-                x = torch.nn.functional.interpolate(x, size=skip_connection.shape[2:], mode='trilinear', align_corners=False)
+                x = torch.nn.functional.interpolate(x, size=skip_connection.shape[2:])
 
             # Concatenate skip connection with the upsampled feature map
             x = torch.cat((skip_connection, x), dim=1)  # Concatenate along the channel dimension
             x = self.ups[idx + 1](x)  # Apply the second double convolution
-
-        # Final convolution: output the binary segmentation mask
-        x = self.final_conv(x)
-
-        # Apply sigmoid activation to output binary probabilities (0 or 1)
-        x = torch.sigmoid(x)
-
-        return x
+        return self.final_conv(x)
+        
     
 class diceloss(torch.nn.Module):
     def init(self):
@@ -802,3 +820,7 @@ class diceloss(torch.nn.Module):
         A_sum = torch.sum(iflat * iflat)
         B_sum = torch.sum(tflat * tflat)
         return 1 - ((2. * intersection + smooth) / (A_sum + B_sum + smooth) )
+
+
+
+
