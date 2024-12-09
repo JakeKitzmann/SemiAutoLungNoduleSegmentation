@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>744</width>
-    <height>1243</height>
+    <width>812</width>
+    <height>1267</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -63,10 +63,29 @@
       <item>
        <widget class="QWidget" name="singleCase" native="true">
         <layout class="QGridLayout" name="singleCaseGroupBox">
-         <item row="1" column="3" colspan="3">
-          <widget class="QSlider" name="roiSizeSlider">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
+         <item row="0" column="3" colspan="4">
+          <widget class="qMRMLNodeComboBox" name="volumeComboBox">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="nodeTypes">
+            <stringlist>
+             <string>vtkMRMLScalarVolumeNode</string>
+            </stringlist>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="6">
+          <widget class="QPushButton" name="centroidManualButton">
+           <property name="text">
+            <string>Enter Centroid Manually</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="5" colspan="2">
+          <widget class="QPushButton" name="noduleCentroidButton">
+           <property name="text">
+            <string>Place With Cursor</string>
            </property>
           </widget>
          </item>
@@ -77,21 +96,8 @@
            </property>
           </widget>
          </item>
-         <item row="3" column="5">
+         <item row="4" column="5">
           <layout class="QHBoxLayout" name="acsLayout">
-           <item>
-            <spacer name="horizontalSpacer">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
            <item>
             <widget class="QLineEdit" name="sLineEdit">
              <property name="maximumSize">
@@ -133,24 +139,20 @@
            </item>
           </layout>
          </item>
-         <item row="1" column="7">
-          <widget class="QLineEdit" name="roiSizeLabel">
-           <property name="maximumSize">
+         <item row="5" column="3">
+          <spacer name="horizontalSpacer_4">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
             <size>
-             <width>50</width>
-             <height>16777215</height>
+             <width>40</width>
+             <height>20</height>
             </size>
            </property>
-          </widget>
+          </spacer>
          </item>
-         <item row="2" column="7">
-          <widget class="QPushButton" name="noduleCentroidButton">
-           <property name="text">
-            <string>Cursor Placement</string>
-           </property>
-          </widget>
-         </item>
-         <item row="5" column="4" colspan="4">
+         <item row="6" column="4" colspan="3">
           <widget class="ctkCollapsibleButton" name="moreOptionsCollapsible">
            <property name="text">
             <string>More Options</string>
@@ -164,9 +166,44 @@
              </widget>
             </item>
             <item>
+             <widget class="QCheckBox" name="visualizeCheckbox">
+              <property name="text">
+               <string>Keep ROI Volume</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout">
+              <item>
+               <widget class="QLabel" name="roiSizeLabelStatic">
+                <property name="text">
+                 <string>Custom ROI Size:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSlider" name="roiSizeSlider">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="roiSizeLabel">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
              <widget class="QCheckBox" name="roiCheckBox">
               <property name="text">
-               <string>Non-Isotropic ROI Size</string>
+               <string>Custom Non-Isotropic ROI Size</string>
               </property>
              </widget>
             </item>
@@ -261,63 +298,17 @@
                 </property>
                </spacer>
               </item>
-              <item row="0" column="0">
-               <widget class="QCheckBox" name="visualizeCheckbox">
-                <property name="text">
-                 <string>VIsualize ROI</string>
-                </property>
-               </widget>
-              </item>
              </layout>
             </item>
             <item>
              <widget class="QPushButton" name="singleROIButton">
               <property name="text">
-               <string>Create Single ROI</string>
+               <string>Create ROI Only</string>
               </property>
              </widget>
             </item>
            </layout>
           </widget>
-         </item>
-         <item row="0" column="3" colspan="5">
-          <widget class="qMRMLNodeComboBox" name="volumeComboBox">
-           <property name="enabled">
-            <bool>true</bool>
-           </property>
-           <property name="nodeTypes">
-            <stringlist>
-             <string>vtkMRMLScalarVolumeNode</string>
-            </stringlist>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="2">
-          <widget class="QLabel" name="roiSizeLabelStatic">
-           <property name="text">
-            <string>ROI Size:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="7">
-          <widget class="QPushButton" name="centroidManualButton">
-           <property name="text">
-            <string>Enter Centroid Manually</string>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="3">
-          <spacer name="horizontalSpacer_4">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
          </item>
         </layout>
        </widget>
@@ -325,22 +316,22 @@
       <item>
        <widget class="QWidget" name="batchCase" native="true">
         <layout class="QGridLayout" name="batchCaseGroupBox">
-         <item row="1" column="4">
-          <widget class="QLineEdit" name="batchVolumeLineEdit"/>
-         </item>
-         <item row="4" column="4" colspan="2">
-          <widget class="QPushButton" name="batchCaseApplyButton">
-           <property name="text">
-            <string>Create ROI Batch</string>
-           </property>
-          </widget>
-         </item>
          <item row="3" column="3">
           <widget class="QLabel" name="label_5">
            <property name="text">
             <string>Output Path</string>
            </property>
           </widget>
+         </item>
+         <item row="1" column="3">
+          <widget class="QLabel" name="label_3">
+           <property name="text">
+            <string>Path to Volumes</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="4">
+          <widget class="QLineEdit" name="batchVolumeLineEdit"/>
          </item>
          <item row="2" column="3">
           <widget class="QLabel" name="label_4">
@@ -351,16 +342,6 @@
          </item>
          <item row="3" column="4">
           <widget class="QLineEdit" name="batchOutputLineEdit"/>
-         </item>
-         <item row="1" column="3">
-          <widget class="QLabel" name="label_3">
-           <property name="text">
-            <string>Path to Volumes</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="4">
-          <widget class="QLineEdit" name="batchCentroidLineEdit"/>
          </item>
          <item row="1" column="2">
           <spacer name="horizontalSpacer_2">
@@ -374,6 +355,23 @@
             </size>
            </property>
           </spacer>
+         </item>
+         <item row="4" column="3">
+          <widget class="QCheckBox" name="batchROIVolumeCheckbox">
+           <property name="text">
+            <string>Keep ROI Volumes</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="4">
+          <widget class="QLineEdit" name="batchCentroidLineEdit"/>
+         </item>
+         <item row="4" column="4" colspan="2">
+          <widget class="QPushButton" name="batchCaseApplyButton">
+           <property name="text">
+            <string>Create Batch ROI</string>
+           </property>
+          </widget>
          </item>
         </layout>
        </widget>
